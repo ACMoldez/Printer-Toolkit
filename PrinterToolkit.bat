@@ -18,7 +18,6 @@ set "WHITE=!ESC![38;2;245;240;255m"
 set "MUTED=!ESC![38;2;169;157;196m"
 set "RED=!ESC![38;2;255;120;145m"
 set "GREEN=!ESC![38;2;155;235;196m"
-set "BG=!ESC![48;2;24;22;45m"
 
 :: Enable midnight-blue background where supported
 cls
@@ -75,7 +74,6 @@ echo  !RED!Invalid option. Please try again.!RESET!
 timeout /t 2 >nul
 goto MENU
 
-
 :VIEW
 call :HEADER "INSTALLED PRINTERS"
 echo.
@@ -84,11 +82,9 @@ echo.
 call :WAIT
 goto MENU
 
-
 :SETTINGS
 start "" "ms-settings:printers"
 goto MENU
-
 
 :SPOOLER
 call :HEADER "RESTART PRINT SPOOLER"
@@ -117,7 +113,6 @@ echo.
 echo  !GREEN!Print Spooler restarted successfully.!RESET!
 call :WAIT
 goto MENU
-
 
 :CLEAR
 call :HEADER "CLEAR PRINT QUEUE"
@@ -158,11 +153,9 @@ echo  !GREEN!Print queue cleared successfully.!RESET!
 call :WAIT
 goto MENU
 
-
 :DEVICES
 start "" control.exe printers
 goto MENU
-
 
 :TEST
 call :HEADER "PRINT TEST PAGE"
@@ -182,7 +175,6 @@ echo  !GREEN!Test page request submitted.!RESET!
 call :WAIT
 goto MENU
 
-
 :STATUS
 call :HEADER "PRINTER STATUS"
 echo.
@@ -191,16 +183,13 @@ echo.
 call :WAIT
 goto MENU
 
-
 :MANAGEMENT
 start "" printmanagement.msc
 goto MENU
 
-
 :SCANNER
 start "" "ms-settings:printers"
 goto MENU
-
 
 :REPAIR
 call :HEADER "FULL PRINTER SETTINGS"
@@ -218,10 +207,8 @@ rundll32.exe printui.dll,PrintUIEntry /p /n "!selectedPrinter!"
 call :WAIT
 goto MENU
 
-
 :HEADER
 cls
-echo(!BG!
 echo.
 echo  !PINK!========================================================!RESET!
 echo.
@@ -230,7 +217,6 @@ echo.
 echo  !PINK!========================================================!RESET!
 echo.
 exit /b 0
-
 
 :LOADPRINTERS
 set "printerFile=%temp%\micah_printers_%random%.txt"
@@ -267,7 +253,6 @@ if !printerCount! EQU 0 (
 
 exit /b 0
 
-
 :SELECTPRINTER
 echo.
 set "printerChoice="
@@ -297,7 +282,6 @@ if not defined selectedPrinter (
 
 exit /b 0
 
-
 :CHECKADMIN
 net session >nul 2>&1
 if errorlevel 1 (
@@ -309,13 +293,11 @@ if errorlevel 1 (
 )
 exit /b 0
 
-
 :WAIT
 echo.
 echo  !PINK!--------------------------------------------------------!RESET!
 pause
 exit /b 0
-
 
 :EXIT
 echo.
