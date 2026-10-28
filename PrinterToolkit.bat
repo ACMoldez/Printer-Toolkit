@@ -301,7 +301,7 @@ exit /b 0
 
 :EXIT
 echo.
-echo  !PURPLE!Thanks for using Micah's Printer Toolkit.!RESET!
+echo  !PURPLE!Thank you for using the Printer Toolkit.!RESET!
 echo.
 echo !RESET!
 exit /b 0
