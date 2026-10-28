@@ -1,8 +1,8 @@
 
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 title Micah's Printer Toolkit
-color 0B
+color 0D
 
 :MENU
 cls
@@ -27,23 +27,22 @@ echo ================================
 set "choice="
 set /p "choice=Choose an option: "
 
-if "%choice%"=="1" goto VIEW
-if "%choice%"=="2" goto SETTINGS
-if "%choice%"=="3" goto SPOOLER
-if "%choice%"=="4" goto CLEAR
-if "%choice%"=="5" goto DEVICES
-if "%choice%"=="6" goto TEST
-if "%choice%"=="7" goto STATUS
-if "%choice%"=="8" goto MANAGEMENT
-if "%choice%"=="9" goto SCANNER
-if "%choice%"=="10" goto REPAIR
-if "%choice%"=="11" exit /b
+if "!choice!"=="1" goto VIEW
+if "!choice!"=="2" goto SETTINGS
+if "!choice!"=="3" goto SPOOLER
+if "!choice!"=="4" goto CLEAR
+if "!choice!"=="5" goto DEVICES
+if "!choice!"=="6" goto TEST
+if "!choice!"=="7" goto STATUS
+if "!choice!"=="8" goto MANAGEMENT
+if "!choice!"=="9" goto SCANNER
+if "!choice!"=="10" goto REPAIR
+if "!choice!"=="11" exit /b
 
 echo.
 echo Invalid option. Pick again.
 pause
 goto MENU
-
 
 :VIEW
 cls
@@ -52,18 +51,15 @@ echo       INSTALLED PRINTERS
 echo ================================
 echo.
 powershell -NoProfile -Command "Get-Printer | Select-Object Name, PortName, PrinterStatus | Format-Table -AutoSize"
-if errorlevel 1 echo Unable to retrieve printers.
 echo.
 pause
 goto MENU
-
 
 :SETTINGS
 cls
 echo Opening Printer Settings...
 start "" "ms-settings:printers"
 goto MENU
-
 
 :SPOOLER
 cls
@@ -79,7 +75,6 @@ net stop spooler
 if errorlevel 1 (
     echo.
     echo Failed to stop the Print Spooler.
-    echo Try running this toolkit as Administrator.
     pause
     goto MENU
 )
@@ -88,9 +83,7 @@ echo.
 echo Starting Print Spooler...
 net start spooler
 if errorlevel 1 (
-    echo.
     echo Failed to start the Print Spooler.
-    echo Try running: net start spooler
     pause
     goto MENU
 )
@@ -99,7 +92,6 @@ echo.
 echo Print Spooler restarted successfully.
 pause
 goto MENU
-
 
 :CLEAR
 cls
@@ -115,15 +107,13 @@ echo from ALL printers on this computer.
 echo.
 set "confirm="
 set /p "confirm=Continue? (Y/N): "
-if /i not "%confirm%"=="Y" goto MENU
+if /i not "!confirm!"=="Y" goto MENU
 
 echo.
 echo Stopping Print Spooler...
 net stop spooler
 if errorlevel 1 (
-    echo.
     echo Could not stop the Print Spooler.
-    echo No queue files were intentionally deleted.
     pause
     goto MENU
 )
@@ -136,7 +126,6 @@ echo.
 echo Starting Print Spooler...
 net start spooler
 if errorlevel 1 (
-    echo.
     echo WARNING: The Print Spooler did not restart.
     echo Run "net start spooler" as Administrator.
     pause
@@ -148,13 +137,11 @@ echo Print queue clearing completed.
 pause
 goto MENU
 
-
 :DEVICES
 cls
 echo Opening Devices and Printers...
 start "" control.exe printers
 goto MENU
-
 
 :TEST
 cls
@@ -162,28 +149,24 @@ echo ================================
 echo          PRINT TEST PAGE
 echo ================================
 echo.
-echo Installed printers:
-powershell -NoProfile -Command "Get-Printer | Select-Object -ExpandProperty Name"
-echo.
-set "printer="
-set /p "printer=Enter the exact printer name: "
 
-if not defined printer (
-    echo No printer name entered.
-    pause
-    goto MENU
-)
+call :LOADPRINTERS
+if errorlevel 1 goto MENU
+
+call :SELECTPRINTER
+if errorlevel 1 goto TEST
 
 echo.
-echo Sending test page to: %printer%
-rundll32.exe printui.dll,PrintUIEntry /k /n "%printer%"
+echo Sending test page to:
+echo !selectedPrinter!
+echo.
+rundll32.exe printui.dll,PrintUIEntry /k /n "!selectedPrinter!"
 
 echo.
 echo Test page command submitted.
 echo Check the printer and its queue for the result.
 pause
 goto MENU
-
 
 :STATUS
 cls
@@ -196,23 +179,15 @@ echo.
 pause
 goto MENU
 
-
 :MANAGEMENT
 cls
 echo Opening Print Management...
 start "" printmanagement.msc
-if errorlevel 1 (
-    echo.
-    echo Print Management may not be installed
-    echo in your edition of Windows.
-    pause
-)
 goto MENU
-
 
 :SCANNER
 cls
-echo Opening Printers and Scanners settings...
+echo Opening Scanner Settings...
 start "" "ms-settings:printers"
 goto MENU
 
@@ -223,23 +198,84 @@ echo ================================
 echo       FULL PRINTER SETTINGS
 echo ================================
 echo.
-echo Installed printers:
-powershell -NoProfile -Command "Get-Printer | Select-Object -ExpandProperty Name"
-echo.
-set "printer="
-set /p "printer=Enter the exact printer name: "
 
-if not defined printer (
-    echo No printer name entered.
-    pause
-    goto MENU
-)
+call :LOADPRINTERS
+if errorlevel 1 goto MENU
+
+call :SELECTPRINTER
+if errorlevel 1 goto REPAIR
 
 echo.
-echo Opening printer properties...
-rundll32.exe printui.dll,PrintUIEntry /p /n "%printer%"
+echo Opening properties for:
+echo !selectedPrinter!
+rundll32.exe printui.dll,PrintUIEntry /p /n "!selectedPrinter!"
+
 pause
 goto MENU
+
+:LOADPRINTERS
+set "printerFile=%temp%\micah_printers_%random%.txt"
+set "printerCount=0"
+
+powershell -NoProfile -Command "Get-Printer | Select-Object -ExpandProperty Name" > "!printerFile!" 2>nul
+
+if not exist "!printerFile!" (
+    echo Unable to retrieve installed printers.
+    pause
+    exit /b 1
+)
+
+for %%F in ("!printerFile!") do if %%~zF EQU 0 (
+    echo No printers found.
+    del "!printerFile!" 2>nul
+    pause
+    exit /b 1
+)
+
+echo Select a printer:
+echo.
+
+for /f "usebackq delims=" %%P in ("!printerFile!") do (
+    set /a printerCount+=1
+    echo !printerCount!. %%P
+)
+
+if !printerCount! EQU 0 (
+    echo No printers found.
+    del "!printerFile!" 2>nul
+    pause
+    exit /b 1
+)
+
+exit /b 0
+
+:SELECTPRINTER
+echo.
+set "printerChoice="
+set /p "printerChoice=Enter printer number (0 to cancel): "
+
+if "!printerChoice!"=="0" (
+    del "!printerFile!" 2>nul
+    exit /b 1
+)
+
+set "selectedPrinter="
+set "printerIndex=0"
+
+for /f "usebackq delims=" %%P in ("!printerFile!") do (
+    set /a printerIndex+=1
+    if "!printerChoice!"=="!printerIndex!" set "selectedPrinter=%%P"
+)
+
+del "!printerFile!" 2>nul
+
+if not defined selectedPrinter (
+    echo.
+    echo Invalid selection. Please try again.
+    exit /b 1
+)
+
+exit /b 0
 
 
 :CHECKADMIN
